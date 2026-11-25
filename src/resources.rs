@@ -193,7 +193,18 @@ fn bkb_pcm(sound: &[u8]) -> Option<Vec<u8>> {
         wave.extend(bits.to_le_bytes());
         wave.extend(b"data");
         wave.extend(len.to_le_bytes());
-        wave.extend(pcm);
+        // One eighth of the original amplitude (about -18 dB) for this UI cue.
+        if len % u32::from(align) != 0 {
+            return None;
+        }
+        if bits == 8 {
+            wave.extend(pcm.iter().map(|&v| (128 + (i16::from(v) - 128) / 8) as u8));
+        } else {
+            for sample_bytes in pcm.chunks_exact(2) {
+                let sample = i16::from_le_bytes([sample_bytes[0], sample_bytes[1]]);
+                wave.extend((sample / 8).to_le_bytes());
+            }
+        }
         return Some(wave);
     }
     None

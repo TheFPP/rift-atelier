@@ -251,10 +251,6 @@ pub fn play_bkb(root: std::path::PathBuf) {
                     SND_MEMORY | SND_NODEFAULT,
                 );
             }
-        } else {
-            unsafe {
-                PlaySoundW(wide("SystemDefault").as_ptr(), ptr::null_mut(), SND_ALIAS);
-            }
         }
     });
 }
