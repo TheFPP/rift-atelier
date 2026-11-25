@@ -105,6 +105,7 @@ struct Atelier {
     library_view: collection::LibraryView,
     settings_dir: String,
     settings_lang: String,
+    settings_volume: u8,
     downloads: Vec<PathBuf>,
     preview: Option<TextureHandle>,
     entries: Vec<String>,
@@ -128,6 +129,7 @@ impl Atelier {
         Self {
             settings_dir: state.dota.to_string_lossy().into(),
             settings_lang: state.language.clone(),
+            settings_volume: state.bkb_volume.min(100),
             state,
             dir,
             page: Page::Home,
@@ -612,7 +614,7 @@ impl Atelier {
                                 ctx.input(|i| i.viewport().maximized.unwrap_or(false)),
                             )
                         {
-                            native::play_bkb(self.state.dota.clone());
+                            native::play_bkb(self.state.dota.clone(), self.state.bkb_volume);
                             ctx.send_viewport_cmd(ViewportCommand::Maximized(true));
                             ctx.request_repaint();
                         }
@@ -733,9 +735,18 @@ impl Atelier {
                     ui,
                     &mut self.settings_dir,
                     &mut self.settings_lang,
+                    &mut self.settings_volume,
                     self.state.installed.as_ref(),
                 ) {
                     self.settings_action(action);
+                }
+                if self.settings_volume != self.state.bkb_volume
+                    && !ui.input(|i| i.pointer.any_down())
+                {
+                    let volume = self.settings_volume;
+                    if !self.change(|state| state.bkb_volume = volume) {
+                        self.settings_volume = self.state.bkb_volume;
+                    }
                 }
             }
             page => {

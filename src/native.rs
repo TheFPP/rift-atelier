@@ -240,9 +240,12 @@ pub fn choose(pattern: &str, title: &str, save: bool) -> Option<PathBuf> {
         }
     }
 }
-pub fn play_bkb(root: std::path::PathBuf) {
+pub fn play_bkb(root: std::path::PathBuf, volume: u8) {
+    if volume == 0 {
+        return;
+    }
     std::thread::spawn(move || {
-        if let Some(wave) = crate::resources::bkb_wave(&root) {
+        if let Some(wave) = crate::resources::bkb_wave(&root, volume) {
             // Synchronous playback on this worker keeps the PCM buffer alive.
             unsafe {
                 PlaySoundW(

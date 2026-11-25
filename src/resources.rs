@@ -105,7 +105,7 @@ fn game_index(dota_root: &Path) -> R<(Vec<u8>, usize)> {
     Ok((data, if version == 2 { 28 } else { 12 }))
 }
 
-pub fn bkb_wave(root: &Path) -> Option<Vec<u8>> {
+pub fn bkb_wave(root: &Path, volume: u8) -> Option<Vec<u8>> {
     let (data, header) = game_index(root).ok()?;
     let mut tree = data.as_slice();
     loop {
@@ -150,13 +150,14 @@ pub fn bkb_wave(root: &Path) -> Option<Vec<u8>> {
                 if crc32fast::hash(&sound) != u32le(entry) {
                     return None;
                 }
-                return bkb_pcm(&sound);
+                return bkb_pcm(&sound, volume);
             }
         }
     }
 }
 
-fn bkb_pcm(sound: &[u8]) -> Option<Vec<u8>> {
+fn bkb_pcm(sound: &[u8], volume: u8) -> Option<Vec<u8>> {
+    let gain = i32::from(volume.min(100));
     let header = sound.get(..16)?;
     let blocks = sound.get(..u32le(header) as usize)?;
     if u16le(&header[6..]) != 1 {
@@ -193,16 +194,18 @@ fn bkb_pcm(sound: &[u8]) -> Option<Vec<u8>> {
         wave.extend(bits.to_le_bytes());
         wave.extend(b"data");
         wave.extend(len.to_le_bytes());
-        // One eighth of the original amplitude (about -18 dB) for this UI cue.
         if len % u32::from(align) != 0 {
             return None;
         }
         if bits == 8 {
-            wave.extend(pcm.iter().map(|&v| (128 + (i16::from(v) - 128) / 8) as u8));
+            wave.extend(
+                pcm.iter()
+                    .map(|&v| (128 + (i32::from(v) - 128) * gain / 100) as u8),
+            );
         } else {
             for sample_bytes in pcm.chunks_exact(2) {
                 let sample = i16::from_le_bytes([sample_bytes[0], sample_bytes[1]]);
-                wave.extend((sample / 8).to_le_bytes());
+                wave.extend(((i32::from(sample) * gain / 100) as i16).to_le_bytes());
             }
         }
         return Some(wave);

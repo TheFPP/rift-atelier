@@ -146,6 +146,7 @@ pub struct Installation {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct State {
+    pub bkb_volume: u8,
     pub items: Vec<Item>,
     pub profiles: Vec<Profile>,
     pub selected: usize,
@@ -156,6 +157,7 @@ pub struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
+            bkb_volume: 13,
             items: vec![],
             profiles: vec![Profile {
                 name: "Основной".into(),

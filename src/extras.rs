@@ -269,12 +269,21 @@ pub fn settings_page(
     ui: &mut Ui,
     dir: &mut String,
     lang: &mut String,
+    volume: &mut u8,
     installed: Option<&Installation>,
 ) -> Option<SettingsAction> {
     ScrollArea::vertical()
         .id_salt("settings-page")
         .show(ui, |ui| {
             title(ui, "Настройки");
+            ui.add_space(8.);
+            box_frame().show(ui, |ui| {
+                ui.label(strong("Звук БКБ", 16.));
+                ui.add(Slider::new(volume, 0..=100).suffix(" %").text("Громкость"));
+                if *volume == 0 {
+                    ui.label(muted("Звук выключен"));
+                }
+            });
             ui.add_space(8.);
             let mut action = box_frame()
                 .show(ui, |ui| game_settings(ui, dir, lang))
