@@ -87,6 +87,7 @@ pub fn launch_instance() -> Option<Instance> {
         return Some(lock);
     }
     let old = [
+        "Rift Atelier 1.3.1 — Мастерская модов Dota 2",
         "Rift Atelier 1.3 — Мастерская модов Dota 2",
         "Rift Atelier 1.2 — Мастерская модов Dota 2",
         "Rift Atelier 1.1 — Мастерская модов Dota 2",
@@ -238,6 +239,24 @@ pub fn choose(pattern: &str, title: &str, save: bool) -> Option<PathBuf> {
             None
         }
     }
+}
+pub fn play_bkb(root: std::path::PathBuf) {
+    std::thread::spawn(move || {
+        if let Some(wave) = crate::resources::bkb_wave(&root) {
+            // Synchronous playback on this worker keeps the PCM buffer alive.
+            unsafe {
+                PlaySoundW(
+                    wave.as_ptr().cast(),
+                    ptr::null_mut(),
+                    SND_MEMORY | SND_NODEFAULT,
+                );
+            }
+        } else {
+            unsafe {
+                PlaySoundW(wide("SystemDefault").as_ptr(), ptr::null_mut(), SND_ALIAS);
+            }
+        }
+    });
 }
 pub fn sound(path: Option<&Path>) -> Result<(), String> {
     let buffer = path.map(wide);

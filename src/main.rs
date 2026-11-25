@@ -612,6 +612,7 @@ impl Atelier {
                                 ctx.input(|i| i.viewport().maximized.unwrap_or(false)),
                             )
                         {
+                            native::play_bkb(self.state.dota.clone());
                             ctx.send_viewport_cmd(ViewportCommand::Maximized(true));
                             ctx.request_repaint();
                         }

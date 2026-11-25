@@ -4,7 +4,7 @@
 
 **Менеджер модов Dota 2 для Windows x64, написанный на Rust.** Собирайте свои текстуры, модели и звуки в профили, меняйте порядок замен и применяйте набор одним VPK. После записи пакета приложение можно закрыть.
 
-[Скачать для Windows](https://github.com/TheFPP/rift-atelier/releases/latest/download/RiftAtelier-1.3.exe) · [Посмотреть промо](https://github.com/TheFPP/rift-atelier/releases/latest/download/RiftAtelier-promo.mp4) · [Руководство](docs/guide-ru.md) · [Поддержать автора](https://www.donationalerts.com/r/the_fpp)
+[Скачать для Windows](https://github.com/TheFPP/rift-atelier/releases/latest/download/RiftAtelier-1.0.0.exe) · [Посмотреть промо](https://github.com/TheFPP/rift-atelier/releases/latest/download/RiftAtelier-promo.mp4) · [Руководство](docs/guide-ru.md) · [Поддержать автора](https://www.donationalerts.com/r/the_fpp)
 
 ## Первая замена
 
@@ -22,6 +22,8 @@
 - Галерея шести героев на главной. Для первого просмотра каждого портрета нужен интернет. Повторно он открывается из локального кэша.
 
 Кнопка **БКБ** разворачивает окно и включает золотое оформление на 9 секунд при первом применении, на 8 при втором и на 7 при каждом следующем. Затем окно возвращается к прежнему виду. Перезарядка длится 95 секунд с момента нажатия. Таймер виден на кнопке, а при новом запуске приложения отсчёт применений начинается заново. [Характеристики Black King Bar у Valve](https://www.dota2.com/datafeed/itemdata?item_id=116&language=english)
+
+При активации звучит оригинальный эффект из установленной Dota 2. Если игровой звук недоступен, используется сигнал Windows.
 
 Рядом с БКБ можно поддержать автора через DonationAlerts.
 

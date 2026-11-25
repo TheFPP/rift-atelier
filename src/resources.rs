@@ -42,20 +42,7 @@ pub fn find_targets(
     if tokens.is_empty() || limit == 0 {
         return Ok(Vec::new());
     }
-    let mut file = File::open(dota_root.join("game/dota/pak01_dir.vpk"))
-        .map_err(|_| "Индекс Dota 2 не найден. Выберите папку dota 2 beta.".to_string())?;
-    let mut header = [0u8; 12];
-    file.read_exact(&mut header).map_err(disk)?;
-    let version = u32le(&header[4..]);
-    let size = u32le(&header[8..]);
-    if u32le(&header) != 0x55aa1234 || !matches!(version, 1 | 2) || size > 128 * 1024 * 1024 {
-        return Err("Неизвестный формат индекса VPK.".into());
-    }
-    if version == 2 {
-        file.seek(SeekFrom::Start(28)).map_err(disk)?;
-    }
-    let mut data = vec![0u8; size as usize];
-    file.read_exact(&mut data).map_err(disk)?;
+    let (data, _) = game_index(dota_root)?;
     let mut tree = data.as_slice();
     let mut found = Vec::new();
     loop {
@@ -98,6 +85,118 @@ pub fn find_targets(
         }
     }
     Ok(found)
+}
+
+fn game_index(dota_root: &Path) -> R<(Vec<u8>, usize)> {
+    let mut file = File::open(dota_root.join("game/dota/pak01_dir.vpk"))
+        .map_err(|_| "Индекс Dota 2 не найден. Выберите папку dota 2 beta.".to_string())?;
+    let mut header = [0u8; 12];
+    file.read_exact(&mut header).map_err(disk)?;
+    let version = u32le(&header[4..]);
+    let size = u32le(&header[8..]);
+    if u32le(&header) != 0x55aa1234 || !matches!(version, 1 | 2) || size > 128 * 1024 * 1024 {
+        return Err("Неизвестный формат индекса VPK.".into());
+    }
+    if version == 2 {
+        file.seek(SeekFrom::Start(28)).map_err(disk)?;
+    }
+    let mut data = vec![0u8; size as usize];
+    file.read_exact(&mut data).map_err(disk)?;
+    Ok((data, if version == 2 { 28 } else { 12 }))
+}
+
+pub fn bkb_wave(root: &Path) -> Option<Vec<u8>> {
+    let (data, header) = game_index(root).ok()?;
+    let mut tree = data.as_slice();
+    loop {
+        let ext = term(&mut tree).ok()?;
+        if ext.is_empty() {
+            return None;
+        }
+        loop {
+            let folder = term(&mut tree).ok()?;
+            if folder.is_empty() {
+                break;
+            }
+            loop {
+                let name = term(&mut tree).ok()?;
+                if name.is_empty() {
+                    break;
+                }
+                let entry = tree.get(..18)?;
+                let preload = u16le(&entry[4..]) as usize;
+                let prefix = tree.get(18..18 + preload)?;
+                tree = tree.get(18 + preload..)?;
+                if (ext, folder, name) != ("vsnd_c", "sounds/items", "black_king_bar") {
+                    continue;
+                }
+                let slot = u16le(&entry[6..]);
+                let mut offset = u32le(&entry[8..]) as u64;
+                let length = u32le(&entry[12..]) as usize;
+                if length + preload > 8 * 1024 * 1024 {
+                    return None;
+                }
+                let archive = if slot == 0x7fff {
+                    offset += (data.len() + header) as u64;
+                    "pak01_dir.vpk".into()
+                } else {
+                    format!("pak01_{slot:03}.vpk")
+                };
+                let mut file = File::open(root.join("game/dota").join(archive)).ok()?;
+                file.seek(SeekFrom::Start(offset)).ok()?;
+                let mut sound = prefix.to_vec();
+                sound.resize(preload + length, 0);
+                file.read_exact(&mut sound[preload..]).ok()?;
+                if crc32fast::hash(&sound) != u32le(entry) {
+                    return None;
+                }
+                return bkb_pcm(&sound);
+            }
+        }
+    }
+}
+
+fn bkb_pcm(sound: &[u8]) -> Option<Vec<u8>> {
+    let header = sound.get(..16)?;
+    let blocks = sound.get(..u32le(header) as usize)?;
+    if u16le(&header[6..]) != 1 {
+        return None;
+    }
+    let table = 8 + u32le(&header[8..]) as usize;
+    for i in 0..u32le(&header[12..]) as usize {
+        let pos = table + 12 * i;
+        let block = blocks.get(pos..pos + 12)?;
+        if &block[..4] != b"DATA" {
+            continue;
+        }
+        let at = pos + 4 + u32le(&block[4..]) as usize;
+        let info = blocks.get(at..at + 32)?;
+        let flags = u32le(info);
+        let rate = flags >> 14;
+        let channels = ((flags >> 7) & 3) as u16;
+        let bits = ((flags >> 2) & 31) as u16;
+        if flags & 3 != 1 || !matches!(channels, 1 | 2) || !matches!(bits, 8 | 16) || rate == 0 {
+            return None;
+        }
+        let len = u32le(&info[28..]);
+        let pcm = sound.get(blocks.len()..)?.get(..len as usize)?;
+        let align = channels * bits / 8;
+        let mut wave = b"RIFF".to_vec();
+        wave.extend((len + 36).to_le_bytes());
+        wave.extend(b"WAVEfmt ");
+        wave.extend(16u32.to_le_bytes());
+        wave.extend(1u16.to_le_bytes());
+        wave.extend(channels.to_le_bytes());
+        wave.extend(rate.to_le_bytes());
+        wave.extend((rate * u32::from(align)).to_le_bytes());
+        wave.extend(align.to_le_bytes());
+        wave.extend(bits.to_le_bytes());
+        wave.extend(b"data");
+        wave.extend(len.to_le_bytes());
+        wave.extend(pcm);
+        return Some(wave);
+    }
+    None
 }
 
 fn extension(path: &Path) -> String {
