@@ -1,0 +1,30 @@
+[package]
+name = "rift-atelier"
+version = "1.3.0"
+license = "MIT"
+description = "A native Windows mod manager for Dota 2"
+repository = "https://github.com/TheFPP/rift-atelier"
+edition = "2024"
+
+[dependencies]
+eframe = { version = "=0.31.1", default-features = false, features = ["glow", "default_fonts"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "tga", "webp"] }
+zip = { version = "=4.6.1", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+crc32fast = "1"
+md5 = "=0.8.0"
+bcdec_rs = "0.2.1"
+lz4_flex = { version = "0.14.2", default-features = false, features = ["std","safe-decode"] }
+wry = { version = "=0.58.1", default-features = false }
+url = "2"
+percent-encoding = "2"
+windows-sys = { version = "0.59", features = ["Win32_Foundation","Win32_UI_Controls_Dialogs","Win32_UI_WindowsAndMessaging","Win32_Graphics_Gdi","Win32_Media_Audio","Win32_Storage_FileSystem","Win32_System_Threading","Win32_System_Registry","Win32_Security","Win32_UI_Shell","Win32_UI_Input_KeyboardAndMouse"] }
+
+[profile.release]
+opt-level = "s"
+strip = true
+codegen-units = 8
+
+[build-dependencies]
+embed-resource = "=3.0.12"

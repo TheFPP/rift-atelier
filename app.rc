@@ -1,0 +1,30 @@
+#include "rift_version.h"
+
+LANGUAGE 0x09, 0x01
+1 ICON "assets/icon.ico"
+1 VERSIONINFO
+ FILEVERSION RIFT_VERSION_NUM
+ PRODUCTVERSION RIFT_VERSION_NUM
+ FILEFLAGSMASK 0x3F
+ FILEFLAGS 0
+ FILEOS 0x00040004L
+ FILETYPE 0x1
+ FILESUBTYPE 0x0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "FileDescription", "Rift Atelier - Dota 2 mod workshop"
+            VALUE "FileVersion", RIFT_VERSION_STR
+            VALUE "InternalName", "rift-atelier"
+            VALUE "OriginalFilename", "rift-atelier.exe"
+            VALUE "ProductName", "Rift Atelier"
+            VALUE "ProductVersion", RIFT_VERSION_STR
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1200
+    END
+END
