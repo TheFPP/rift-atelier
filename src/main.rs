@@ -1,4 +1,5 @@
 #![windows_subsystem = "windows"]
+mod bkb;
 mod catalog;
 mod catalog_browser;
 mod collection;
@@ -95,7 +96,7 @@ struct Atelier {
     browser: catalog_browser::Browser,
     transfer: Option<std::sync::Arc<download::Progress>>,
     thumbs: collection::Thumbnails,
-    bkb_restore_maximized: Option<bool>,
+    bkb: bkb::Bkb,
     dialog: Option<Dialog>,
     game_found: bool,
     queue: VecDeque<PathBuf>,
@@ -134,7 +135,7 @@ impl Atelier {
             browser: Default::default(),
             transfer: None,
             thumbs: Default::default(),
-            bkb_restore_maximized: None,
+            bkb: Default::default(),
             dialog: None,
             game_found,
             queue: VecDeque::new(),
@@ -518,7 +519,7 @@ impl Atelier {
         SidePanel::left("rail")
             .frame(
                 Frame::NONE
-                    .fill(if self.bkb_restore_maximized.is_some() {
+                    .fill(if self.bkb.active() {
                         Color32::from_rgb(57, 40, 9)
                     } else {
                         SIDE
@@ -577,31 +578,42 @@ impl Atelier {
                             self.navigate(Page::Catalog);
                         }
                         ui.add_space(14.);
-                        let bkb = self.bkb_restore_maximized.is_some();
+                        let now = ctx.input(|i| i.time);
+                        let active = self.bkb.active();
+                        let countdown = self.bkb.countdown(now);
+                        let label = match countdown {
+                            Some((left, _)) if active => format!("БКБ · {left} с"),
+                            Some((left, _)) => format!("БКБ · КД {left} с"),
+                            None => "БКБ".into(),
+                        };
                         if ui
-                            .add_sized(
-                                [ui.available_width(), 29.],
-                                Button::new(RichText::new("БКБ").font(bold(14.)).color(if bkb {
-                                    Color32::BLACK
-                                } else {
-                                    GOLD
-                                }))
-                                .fill(if bkb {
+                            .add_enabled(
+                                countdown.is_none(),
+                                Button::new(
+                                    RichText::new(label).font(bold(14.)).color(if active {
+                                        Color32::BLACK
+                                    } else {
+                                        GOLD
+                                    }),
+                                )
+                                .min_size(vec2(ui.available_width(), 29.))
+                                .fill(if active {
                                     Color32::from_rgb(251, 196, 55)
                                 } else {
                                     Color32::from_rgb(54, 44, 27)
                                 }),
                             )
-                            .on_hover_text("Развернуть окно и включить золотое оформление")
+                            .on_hover_text(
+                                "Первое применение длится 9 секунд, второе — 8, остальные — 7. Перезарядка — 95 секунд с нажатия.",
+                            )
                             .clicked()
+                            && self.bkb.activate(
+                                now,
+                                ctx.input(|i| i.viewport().maximized.unwrap_or(false)),
+                            )
                         {
-                            if let Some(previous) = self.bkb_restore_maximized.take() {
-                                ctx.send_viewport_cmd(ViewportCommand::Maximized(previous));
-                            } else {
-                                self.bkb_restore_maximized =
-                                    Some(ctx.input(|i| i.viewport().maximized.unwrap_or(false)));
-                                ctx.send_viewport_cmd(ViewportCommand::Maximized(true));
-                            }
+                            ctx.send_viewport_cmd(ViewportCommand::Maximized(true));
+                            ctx.request_repaint();
                         }
                         if ui
                             .add_sized(
@@ -628,14 +640,9 @@ impl Atelier {
                                 );
                                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                                     ui.label(
-                                        RichText::new(concat!(
-                                            "v",
-                                            env!("CARGO_PKG_VERSION_MAJOR"),
-                                            ".",
-                                            env!("CARGO_PKG_VERSION_MINOR")
-                                        ))
-                                        .font(mono(10.))
-                                        .color(MUTED),
+                                        RichText::new(concat!("v", env!("CARGO_PKG_VERSION")))
+                                            .font(mono(10.))
+                                            .color(MUTED),
                                     )
                                 });
                             });
@@ -650,7 +657,7 @@ impl Atelier {
     }
     fn body(&mut self, ctx: &Context) {
         CentralPanel::default()
-            .frame(Frame::NONE.fill(if self.bkb_restore_maximized.is_some() {
+            .frame(Frame::NONE.fill(if self.bkb.active() {
                 Color32::from_rgb(76, 53, 11)
             } else {
                 BG
@@ -816,6 +823,10 @@ impl Atelier {
 }
 impl eframe::App for Atelier {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
+        let now = ctx.input(|i| i.time);
+        if let Some(previous) = self.bkb.advance(now) {
+            ctx.send_viewport_cmd(ViewportCommand::Maximized(previous));
+        }
         self.receive();
         self.browser.begin_frame();
         for event in self.browser.take_events() {
@@ -848,6 +859,9 @@ impl eframe::App for Atelier {
             }
         }
         self.sidebar(ctx);
+        if let Some((_, next_change)) = self.bkb.countdown(now) {
+            ctx.request_repaint_after(next_change);
+        }
         if self
             .notice
             .as_ref()
@@ -882,14 +896,14 @@ impl eframe::App for Atelier {
         }
         self.body(ctx);
         self.dialog_ui(ctx);
-        if self.bkb_restore_maximized.is_some() {
+        if self.bkb.active() {
             let p = ctx.layer_painter(LayerId::new(Order::Tooltip, Id::new("bkb-tint")));
             let r = ctx.screen_rect();
             p.rect_filled(r, 0., Color32::from_rgba_unmultiplied(255, 189, 24, 48));
             p.rect_stroke(
                 r.shrink(1.),
                 0.,
-                Stroke::new(3., Color32::from_rgb(255, 204, 62)),
+                Stroke::new(3_f32, Color32::from_rgb(255, 204, 62)),
                 StrokeKind::Inside,
             );
         }

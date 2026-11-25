@@ -77,9 +77,7 @@ pub fn instance() -> Option<Instance> {
 }
 pub const WINDOW_TITLE: &str = concat!(
     "Rift Atelier ",
-    env!("CARGO_PKG_VERSION_MAJOR"),
-    ".",
-    env!("CARGO_PKG_VERSION_MINOR"),
+    env!("CARGO_PKG_VERSION"),
     " — Мастерская модов Dota 2"
 );
 
@@ -89,6 +87,7 @@ pub fn launch_instance() -> Option<Instance> {
         return Some(lock);
     }
     let old = [
+        "Rift Atelier 1.3 — Мастерская модов Dota 2",
         "Rift Atelier 1.2 — Мастерская модов Dota 2",
         "Rift Atelier 1.1 — Мастерская модов Dota 2",
         "Rift Atelier — Мастерская модов Dota 2",
