@@ -158,6 +158,8 @@ pub fn bkb_wave(root: &Path, volume: u8) -> Option<Vec<u8>> {
 
 fn bkb_pcm(sound: &[u8], volume: u8) -> Option<Vec<u8>> {
     let gain = i32::from(volume.min(100));
+    // The slider's upper limit is one eighth of the game's original amplitude.
+    const GAIN_DIVISOR: i32 = 800;
     let header = sound.get(..16)?;
     let blocks = sound.get(..u32le(header) as usize)?;
     if u16le(&header[6..]) != 1 {
@@ -200,12 +202,12 @@ fn bkb_pcm(sound: &[u8], volume: u8) -> Option<Vec<u8>> {
         if bits == 8 {
             wave.extend(
                 pcm.iter()
-                    .map(|&v| (128 + (i32::from(v) - 128) * gain / 100) as u8),
+                    .map(|&v| (128 + (i32::from(v) - 128) * gain / GAIN_DIVISOR) as u8),
             );
         } else {
             for sample_bytes in pcm.chunks_exact(2) {
                 let sample = i16::from_le_bytes([sample_bytes[0], sample_bytes[1]]);
-                wave.extend(((i32::from(sample) * gain / 100) as i16).to_le_bytes());
+                wave.extend(((i32::from(sample) * gain / GAIN_DIVISOR) as i16).to_le_bytes());
             }
         }
         return Some(wave);

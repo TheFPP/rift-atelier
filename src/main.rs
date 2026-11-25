@@ -16,6 +16,7 @@ mod resources;
 mod showcase;
 mod store;
 mod theme;
+mod titlebar;
 use eframe::egui::*;
 use std::{
     collections::VecDeque,
@@ -870,6 +871,7 @@ impl eframe::App for Atelier {
                 ctx.memory_mut(|m| m.request_focus(Id::new(collection::SEARCH_FIELD)));
             }
         }
+        titlebar::show(ctx, self.bkb.active());
         self.sidebar(ctx);
         if let Some((_, next_change)) = self.bkb.countdown(now) {
             ctx.request_repaint_after(next_change);
@@ -959,6 +961,7 @@ fn main() {
     let opt = eframe::NativeOptions {
         viewport: ViewportBuilder::default()
             .with_title(native::WINDOW_TITLE)
+            .with_decorations(false)
             .with_inner_size([1130., 765.])
             .with_min_inner_size([830., 595.])
             .with_icon(theme::icon_data()),
